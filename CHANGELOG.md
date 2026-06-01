@@ -1,5 +1,12 @@
 # Changelog
 
+## VSS 1.0.0
+
+- publish the current VSS source as the first stable release
+- keep the server-side LOD networking, generation, disk-read, dirty-column, config, command, and Voxy integration implementation in source
+- package the shared common implementation as a source-built nested jar
+- verify the built jar does not bundle Voxy, Sodium, or ModMenu classes
+
 ## VSS 0.2.4+mc1.21.10
 
 - replace the placeholder implementation with the full VSS source from the reference artifact
@@ -17,7 +24,7 @@
 
 - initial VSS artifact for Minecraft 1.21.10
 - build VSS from tracked Fabric source instead of a checked-in jar artifact
-- runs as an independent Fabric mod with mod id `vss`
+- runs as a Fabric mod with mod id `vss`
 - starts the VSS request processing service on dedicated servers
 - supports the `vsslod stats` and `vsslod diag` server commands
 - does not bundle or redistribute the Voxy client mod

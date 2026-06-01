@@ -3,7 +3,7 @@
   "id": "vss",
   "version": "${version}",
   "name": "VSS",
-  "description": "Independent server-side LOD support for Voxy-compatible clients on Minecraft 1.21.10.",
+  "description": "Server-side LOD support for Voxy-compatible clients.",
   "authors": [
     "Microck"
   ],

@@ -29,20 +29,20 @@ jobs:
 
       - name: Inspect VSS metadata
         run: |
-          unzip -p build/libs/vss-0.2.4+mc1.21.10.jar fabric.mod.json > /tmp/fabric.mod.json
+          unzip -p build/libs/vss-1.0.0.jar fabric.mod.json > /tmp/fabric.mod.json
           grep '"id": "vss"' /tmp/fabric.mod.json
           grep '"name": "VSS"' /tmp/fabric.mod.json
-          grep '"version": "0.2.4+mc1.21.10"' /tmp/fabric.mod.json
+          grep '"version": "1.0.0"' /tmp/fabric.mod.json
           grep '"1.21.10"' /tmp/fabric.mod.json
-          test "$(zipinfo -1 build/libs/vss-0.2.4+mc1.21.10.jar | grep -c '^fabric.mod.json$')" = "1"
-          test "$(zipinfo -1 build/libs/vss-0.2.4+mc1.21.10.jar | grep -c '^META-INF/jars/common-0.2.4.jar$')" = "1"
-          if zipinfo -1 build/libs/vss-0.2.4+mc1.21.10.jar | grep -Ei '(^|/)voxy-[^/]*[.]jar$|^(net/caffeinemc|com/terraformersmc|me/cortex)/'; then
+          test "$(zipinfo -1 build/libs/vss-1.0.0.jar | grep -c '^fabric.mod.json$')" = "1"
+          test "$(zipinfo -1 build/libs/vss-1.0.0.jar | grep -c '^META-INF/jars/common-1.0.0.jar$')" = "1"
+          if zipinfo -1 build/libs/vss-1.0.0.jar | grep -Ei '(^|/)voxy-[^/]*[.]jar$|^(net/caffeinemc|com/terraformersmc|me/cortex)/'; then
             echo "Artifact bundled Voxy or optional client dependency classes." >&2
             exit 1
           fi
 
       - name: Run clean Fabric smoke test
-        run: bash scripts/smoke-test-fabric-server.sh build/libs/vss-0.2.4+mc1.21.10.jar
+        run: bash scripts/smoke-test-fabric-server.sh build/libs/vss-1.0.0.jar
 
       - name: Confirm Voxy client jar is not tracked
         run: |
