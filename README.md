@@ -3,8 +3,6 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/fabric-server%20%2B%20client-000000?style=flat-square" alt="fabric server and client badge">
-  <img src="https://img.shields.io/badge/server--side%20lod-voxy%20compatible-000000?style=flat-square" alt="server-side LOD badge">
   <a href="https://modrinth.com/mod/vss"><img src="https://img.shields.io/badge/modrinth-VSS-000000?style=flat-square" alt="modrinth VSS badge"></a>
 </p>
 
