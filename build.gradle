@@ -1,0 +1,162 @@
+plugins {
+    id 'fabric-loom' version "${loom_version}"
+    id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    maven {
+        name = 'Fabric'
+        url = 'https://maven.fabricmc.net/'
+    }
+    maven {
+        name = 'Terraformers'
+        url = 'https://maven.terraformersmc.com/'
+    }
+    mavenCentral()
+}
+
+loom {
+    mods {
+        vss {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+sourceSets {
+    common {
+        java.srcDir 'src/common/java'
+        resources.srcDir 'src/common/resources'
+    }
+
+    stubs {
+        java.srcDir 'src/compile-stubs/java'
+    }
+}
+
+configurations {
+    intermediaryCompileOnly
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    mappings "net.fabricmc:yarn:${yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
+
+    intermediaryCompileOnly "net.fabricmc:fabric-loader:${loader_version}"
+    intermediaryCompileOnly "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
+    intermediaryCompileOnly "com.terraformersmc:modmenu:${modmenu_version}"
+}
+
+def commonVersion = project.mod_version.split('\\+')[0]
+def intermediaryMinecraftJars = files {
+    fileTree("${gradle.gradleUserHomeDir}/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-merged-intermediary") {
+        include '**/*.jar'
+    }.files
+}
+def intermediaryClasspath = {
+    intermediaryMinecraftJars + configurations.intermediaryCompileOnly + configurations.compileClasspath
+}
+
+processResources {
+    inputs.property 'version', project.version
+    inputs.property 'common_version', commonVersion
+    inputs.property 'minecraft_version', project.minecraft_version
+    inputs.property 'loader_version', project.loader_version
+    inputs.property 'fabric_version', project.fabric_version
+
+    filesMatching('fabric.mod.json') {
+        expand inputs.properties
+    }
+}
+
+processCommonResources {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    inputs.property 'common_version', commonVersion
+
+    filesMatching('fabric.mod.json') {
+        expand inputs.properties
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 21
+    it.options.compilerArgs.add('-proc:none')
+}
+
+compileStubsJava {
+    classpath = intermediaryClasspath()
+}
+
+compileCommonJava {
+    classpath = intermediaryClasspath()
+}
+
+compileJava {
+    dependsOn compileCommonJava, compileStubsJava
+    classpath = sourceSets.common.output + files(compileStubsJava.destinationDirectory) + intermediaryClasspath()
+}
+
+java {
+    withSourcesJar()
+
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+sourcesJar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from sourceSets.common.allSource
+}
+
+tasks.register('commonJar', Jar) {
+    dependsOn compileCommonJava, processCommonResources
+    archiveFileName = "common-${commonVersion}.jar"
+    from sourceSets.common.output
+}
+
+jar {
+    inputs.property 'minecraftVersion', project.minecraft_version
+    inputs.property 'loaderVersion', project.loader_version
+    inputs.property 'archivesName', project.base.archivesName
+    dependsOn commonJar
+
+    destinationDirectory = layout.buildDirectory.dir('libs')
+    archiveFileName = "${project.archives_base_name}-${project.mod_version}.jar"
+
+    manifest {
+        attributes(
+                'Fabric-Minecraft-Version': inputs.properties.minecraftVersion,
+                'Fabric-Loader-Version': inputs.properties.loaderVersion
+        )
+    }
+
+    from('LICENSE') {
+        rename { "${it}_${inputs.properties.archivesName}" }
+    }
+
+    from(commonJar) {
+        into 'META-INF/jars'
+    }
+}
+
+remapJar {
+    enabled = false
+}
+
+publishing {
+    publications {
+        create('mavenJava', MavenPublication) {
+            artifactId = project.archives_base_name
+            from components.java
+        }
+    }
+}

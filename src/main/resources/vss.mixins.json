@@ -1,0 +1,16 @@
+{
+  "required": true,
+  "package": "dev.micr.vss.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "mixins": [
+    "AccessorServerChunkCache",
+    "AccessorChunkMap",
+    "ChunkMapSaveHook"
+  ],
+  "client": [
+    "IntegratedServerLanHook"
+  ]
+}

@@ -1,0 +1,8 @@
+*.sh text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.gradle text eol=lf
+gradlew text eol=lf
+gradlew.bat text eol=crlf

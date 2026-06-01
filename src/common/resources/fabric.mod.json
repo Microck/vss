@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "dev_micr_common",
+  "version": "${common_version}",
+  "name": "common",
+  "custom": {
+    "fabric-loom:generated": true
+  }
+}

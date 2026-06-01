@@ -1,0 +1,147 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Git tag to release
+        required: true
+        default: v0.2.4+mc1.21.10
+      publish_modrinth:
+        description: Publish to Modrinth when credentials are configured
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+env:
+  ARTIFACT: build/libs/vss-0.2.4+mc1.21.10.jar
+  VSS_VERSION: 0.2.4+mc1.21.10
+  MINECRAFT_VERSION: 1.21.10
+  FABRIC_API_VERSION: 0.138.4+1.21.10
+  MODRINTH_PROJECT_ID: ${{ vars.MODRINTH_PROJECT_ID }}
+  MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Build VSS from source
+        run: ./gradlew build
+
+      - name: Verify VSS artifact
+        run: |
+          test -f "$ARTIFACT"
+          unzip -p "$ARTIFACT" fabric.mod.json > /tmp/fabric.mod.json
+          grep '"id": "vss"' /tmp/fabric.mod.json
+          grep '"name": "VSS"' /tmp/fabric.mod.json
+          grep '"version": "0.2.4+mc1.21.10"' /tmp/fabric.mod.json
+          grep '"1.21.10"' /tmp/fabric.mod.json
+          test "$(zipinfo -1 "$ARTIFACT" | grep -c '^META-INF/jars/common-0.2.4.jar$')" = "1"
+          unzip -p "$ARTIFACT" META-INF/MANIFEST.MF > /tmp/manifest.mf
+          grep 'Fabric-Minecraft-Version: 1.21.10' /tmp/manifest.mf
+          grep 'Fabric-Loader-Version: 0.18.4' /tmp/manifest.mf
+          test "$(zipinfo -1 "$ARTIFACT" | grep -c '^fabric.mod.json$')" = "1"
+          if zipinfo -1 "$ARTIFACT" | grep -Ei '(^|/)voxy-[^/]*[.]jar$|^(net/caffeinemc|com/terraformersmc|me/cortex)/'; then
+            echo "Artifact bundled Voxy or optional client dependency classes." >&2
+            exit 1
+          fi
+
+      - name: Run clean Fabric smoke test
+        run: bash scripts/smoke-test-fabric-server.sh "$ARTIFACT"
+
+      - name: Resolve release tag
+        id: release
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            tag="${{ inputs.tag }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+          printf 'tag=%s\n' "$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure tag exists
+        run: |
+          tag="${{ steps.release.outputs.tag }}"
+          if ! git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            git tag "$tag" "$GITHUB_SHA"
+            git push origin "refs/tags/$tag"
+          fi
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ steps.release.outputs.tag }}"
+          title="VSS ${VSS_VERSION}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$ARTIFACT" --clobber
+          else
+            gh release create "$tag" "$ARTIFACT" \
+              --title "$title" \
+              --notes-file CHANGELOG.md \
+              --latest \
+              --target "$GITHUB_SHA"
+          fi
+
+      - name: Check existing Modrinth version
+        id: modrinth_existing
+        if: ${{ env.MODRINTH_PROJECT_ID != '' && env.MODRINTH_TOKEN != '' }}
+        run: |
+          response="$(curl -sS \
+            -H "Authorization: ${MODRINTH_TOKEN}" \
+            -H "User-Agent: Microck/vss-release (contact@micr.dev)" \
+            "https://api.modrinth.com/v2/project/${MODRINTH_PROJECT_ID}/version")"
+
+          if printf '%s' "$response" | jq -e --arg version "$VSS_VERSION" '.[] | select(.version_number == $version)' >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to Modrinth
+        if: ${{ env.MODRINTH_PROJECT_ID != '' && env.MODRINTH_TOKEN != '' && steps.modrinth_existing.outputs.exists != 'true' && (github.event_name != 'workflow_dispatch' || inputs.publish_modrinth == true) }}
+        uses: Kira-NT/mc-publish@v3.3.0
+        with:
+          modrinth-id: ${{ env.MODRINTH_PROJECT_ID }}
+          modrinth-token: ${{ env.MODRINTH_TOKEN }}
+          modrinth-featured: true
+          modrinth-unfeature-mode: subset
+          files: ${{ env.ARTIFACT }}
+          name: VSS ${{ env.VSS_VERSION }} for Minecraft ${{ env.MINECRAFT_VERSION }}
+          version: ${{ env.VSS_VERSION }}
+          version-type: release
+          changelog-file: CHANGELOG.md
+          loaders: fabric
+          game-versions: ${{ env.MINECRAFT_VERSION }}
+          dependencies: |
+            fabric-api(required){modrinth:P7dR8mSH}
+            voxy(optional){modrinth:fxxUqruK}
+          java: Java 21
+
+      - name: Report skipped Modrinth publish
+        if: ${{ env.MODRINTH_PROJECT_ID == '' || env.MODRINTH_TOKEN == '' }}
+        run: |
+          echo "Skipped Modrinth publish because MODRINTH_PROJECT_ID or MODRINTH_TOKEN is not configured."
+
+      - name: Report existing Modrinth version
+        if: ${{ steps.modrinth_existing.outputs.exists == 'true' }}
+        run: |
+          echo "Skipped Modrinth publish because version ${VSS_VERSION} already exists."

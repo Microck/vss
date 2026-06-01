@@ -1,0 +1,23 @@
+.agent-tmp/
+.agent-gradle/
+.cache/
+.gradle/
+.residue/
+build/
+__pycache__/
+
+# Downloaded third-party inputs and local server state.
+downloads/
+server-smoke-*/
+.runtime/
+*.log
+*.tmp
+
+# Local connection material.
+remote_connect_*_ed25519
+remote_connect_*_ed25519.pub
+
+# Do not accidentally commit the separate Voxy client mod.
+voxy-*.jar
+libs/voxy*.jar
+downloads/voxy*.jar

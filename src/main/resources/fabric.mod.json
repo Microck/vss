@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "id": "vss",
+  "version": "${version}",
+  "name": "VSS",
+  "description": "Independent server-side LOD support for Voxy-compatible clients on Minecraft 1.21.10.",
+  "authors": [
+    "Microck"
+  ],
+  "contact": {
+    "homepage": "https://github.com/Microck/vss",
+    "sources": "https://github.com/Microck/vss"
+  },
+  "license": "MIT",
+  "icon": "assets/vss/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "dev.micr.vss.VSSMod"
+    ],
+    "client": [
+      "dev.micr.vss.VSSClient"
+    ],
+    "sodium:config_api_user": [
+      "dev.micr.vss.config.VSSConfigMenu"
+    ],
+    "modmenu": [
+      "dev.micr.vss.config.VSSModMenuIntegration"
+    ]
+  },
+  "mixins": [
+    "vss.mixins.json"
+  ],
+  "depends": {
+    "minecraft": [
+      "1.21.10"
+    ],
+    "fabricloader": ">=0.18.4",
+    "fabric-api": ">=0.138.4"
+  },
+  "suggests": {
+    "sodium": ">=0.7.3",
+    "modmenu": "*",
+    "voxy": ">=0.2.9-alpha"
+  },
+  "jars": [
+    {
+      "file": "META-INF/jars/common-${common_version}.jar"
+    }
+  ]
+}

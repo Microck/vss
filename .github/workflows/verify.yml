@@ -1,0 +1,52 @@
+name: Verify
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Build VSS from source
+        run: ./gradlew build
+
+      - name: Inspect VSS metadata
+        run: |
+          unzip -p build/libs/vss-0.2.4+mc1.21.10.jar fabric.mod.json > /tmp/fabric.mod.json
+          grep '"id": "vss"' /tmp/fabric.mod.json
+          grep '"name": "VSS"' /tmp/fabric.mod.json
+          grep '"version": "0.2.4+mc1.21.10"' /tmp/fabric.mod.json
+          grep '"1.21.10"' /tmp/fabric.mod.json
+          test "$(zipinfo -1 build/libs/vss-0.2.4+mc1.21.10.jar | grep -c '^fabric.mod.json$')" = "1"
+          test "$(zipinfo -1 build/libs/vss-0.2.4+mc1.21.10.jar | grep -c '^META-INF/jars/common-0.2.4.jar$')" = "1"
+          if zipinfo -1 build/libs/vss-0.2.4+mc1.21.10.jar | grep -Ei '(^|/)voxy-[^/]*[.]jar$|^(net/caffeinemc|com/terraformersmc|me/cortex)/'; then
+            echo "Artifact bundled Voxy or optional client dependency classes." >&2
+            exit 1
+          fi
+
+      - name: Run clean Fabric smoke test
+        run: bash scripts/smoke-test-fabric-server.sh build/libs/vss-0.2.4+mc1.21.10.jar
+
+      - name: Confirm Voxy client jar is not tracked
+        run: |
+          if git ls-files | grep -Ei '(^|/)voxy-[^/]*[.]jar$'; then
+            echo "This repository must not track the Voxy client jar." >&2
+            exit 1
+          fi
